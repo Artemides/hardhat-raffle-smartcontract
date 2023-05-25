@@ -40,4 +40,12 @@ contract Raffle {
     function getPlayer(uint256 playerIndex) public view returns (address) {
         return s_players[playerIndex];
     }
+
+    receive() external payable {
+        joinRaffle();
+    }
+
+    fallback() external payable {
+        joinRaffle();
+    }
 }
