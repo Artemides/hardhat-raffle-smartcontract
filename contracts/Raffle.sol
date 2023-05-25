@@ -10,9 +10,11 @@ pragma solidity ^0.8.0;
 // keep track of each entering player
 // emit and event when a user enters into the raffle
 
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+
 error Raffle__NoEnoughStartingFee();
 
-contract Raffle {
+contract Raffle is VRFConsumerBaseV2 {
     uint256 immutable i_entraceFee;
     address payable[] s_players;
 
@@ -23,9 +25,20 @@ contract Raffle {
         _;
     }
 
-    constructor(uint256 entraceFee) {
+    constructor(address vrfCoordinatorV2, uint256 entraceFee) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_entraceFee = entraceFee;
     }
+
+    // create a function to pick the winner
+    // Request the random number to VRF
+    // once got it make use of it
+    // keep in mind that VRF is two transaction process
+    function requestRandomNumber() external {}
+
+    function fulfillRandomWords(
+        uint256 requestId,
+        uint256[] memory randomWords
+    ) internal override {}
 
     function joinRaffle() public payable enoughStartingFee {
         s_players.push(payable(msg.sender));
