@@ -11,29 +11,56 @@ pragma solidity ^0.8.0;
 // emit and event when a user enters into the raffle
 
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
 error Raffle__NoEnoughStartingFee();
 
 contract Raffle is VRFConsumerBaseV2 {
-    uint256 immutable i_entraceFee;
+    uint256 private immutable i_entraceFee;
     address payable[] s_players;
+    VRFCoordinatorV2Interface private i_vrfCoordinatorV2;
+    bytes32 private immutable i_gasLane;
+    uint64 private immutable i_subscriptionId;
+    uint8 private constant REQUEST_CONFIRMATIONS = 5;
+    uint32 private immutable i_callbackGasLimit;
+    uint8 private constant NUM_WORDS = 1;
 
-    event PlayerJoined(address playerAddress);
+    event RafflePlayerJoined(address playerAddress);
+    event RaffleRequestWinner(uint256 requestId);
 
     modifier enoughStartingFee() {
         if (msg.value < i_entraceFee) revert Raffle__NoEnoughStartingFee();
         _;
     }
 
-    constructor(address vrfCoordinatorV2, uint256 entraceFee) VRFConsumerBaseV2(vrfCoordinatorV2) {
+    constructor(
+        address vrfCoordinatorV2,
+        uint256 entraceFee,
+        bytes32 gasLane,
+        uint64 subscriptionId,
+        uint32 callbackGasLimit
+    ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_entraceFee = entraceFee;
+        i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(vrfCoordinatorV2);
+        i_gasLane = gasLane;
+        i_subscriptionId = subscriptionId;
+        i_callbackGasLimit = callbackGasLimit;
     }
 
     // create a function to pick the winner
     // Request the random number to VRF
     // once got it make use of it
     // keep in mind that VRF is two transaction process
-    function requestRandomNumber() external {}
+    function requestRandomNumber() external {
+        uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
+            i_gasLane,
+            i_subscriptionId,
+            REQUEST_CONFIRMATIONS,
+            i_callbackGasLimit,
+            NUM_WORDS
+        );
+        emit RaffleRequestWinner(requestId);
+    }
 
     function fulfillRandomWords(
         uint256 requestId,
@@ -43,7 +70,7 @@ contract Raffle is VRFConsumerBaseV2 {
     function joinRaffle() public payable enoughStartingFee {
         s_players.push(payable(msg.sender));
 
-        emit PlayerJoined(msg.sender);
+        emit RafflePlayerJoined(msg.sender);
     }
 
     function getEntraceFee() public view returns (uint256) {
