@@ -14,6 +14,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
 error Raffle__NoEnoughStartingFee();
+error Raffle__WinnerTransferFailed();
 
 contract Raffle is VRFConsumerBaseV2 {
     uint256 private immutable i_entraceFee;
@@ -24,9 +25,11 @@ contract Raffle is VRFConsumerBaseV2 {
     uint8 private constant REQUEST_CONFIRMATIONS = 5;
     uint32 private immutable i_callbackGasLimit;
     uint8 private constant NUM_WORDS = 1;
+    address private s_lastWinner;
 
     event RafflePlayerJoined(address playerAddress);
     event RaffleRequestWinner(uint256 requestId);
+    event WinnerPicked(address indexed winnerAddress);
 
     modifier enoughStartingFee() {
         if (msg.value < i_entraceFee) revert Raffle__NoEnoughStartingFee();
@@ -62,10 +65,14 @@ contract Raffle is VRFConsumerBaseV2 {
         emit RaffleRequestWinner(requestId);
     }
 
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
-    ) internal override {}
+    function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
+        uint256 winnerIndex = randomWords[0] % s_players.length;
+        s_lastWinner = s_players[winnerIndex];
+        (bool transfered, ) = s_lastWinner.call{value: address(this).balance}("");
+        if (!transfered) revert Raffle__WinnerTransferFailed();
+
+        emit WinnerPicked(s_lastWinner);
+    }
 
     function joinRaffle() public payable enoughStartingFee {
         s_players.push(payable(msg.sender));
