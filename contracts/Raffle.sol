@@ -18,6 +18,13 @@ error Raffle__WinnerTransferFailed();
 error Raffle__NotOpen();
 error Raffle__NoIntervalReachedToWin(uint256 remainingInterval, uint256 raffleStatus);
 
+/**
+ * @title Untamperable Raffle
+ * @author Artemides - Edmundo Arias
+ * @notice this descentalized raffle picks a random winner
+ * @dev Raffle is implements the VRF v2 and Chainlink Keepers
+ */
+
 contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     enum RaffleState {
         OPEN,
@@ -74,6 +81,11 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         emit RafflePlayerJoined(msg.sender);
     }
 
+    /**
+     * @dev function required to run on chainlink automation network
+     * @return upkeepNeeded is needed to perform the upkeep
+     * @return performData is the data to be run
+     */
     function checkUpkeep(
         bytes calldata /* checkData */
     ) public view override returns (bool upkeepNeeded, bytes memory performData) {
@@ -96,8 +108,6 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         );
         emit RaffleRequestWinner(requestId);
     }
-
-    // function performUpkeep(bytes calldata performData) external override {}
 
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
         uint256 winnerIndex = randomWords[0] % s_players.length;
