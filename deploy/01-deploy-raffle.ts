@@ -4,7 +4,7 @@ import { ethers, network } from "hardhat";
 import { VRFCoordinatorV2Mock } from "../typechain-types";
 import { verify } from "../utils/contract-verify";
 
-export const raffle = async (hre: HardhatRuntimeEnvironment) => {
+const raffle = async (hre: HardhatRuntimeEnvironment) => {
     const { getNamedAccounts, deployments } = hre;
     const { deploy, log } = deployments;
     const { deployer } = await getNamedAccounts();
@@ -49,3 +49,6 @@ export const raffle = async (hre: HardhatRuntimeEnvironment) => {
         await verify(raffle.address, args);
     }
 };
+
+export default raffle;
+raffle.tags = ["all", "raffle"];
