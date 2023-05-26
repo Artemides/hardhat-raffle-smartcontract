@@ -4,6 +4,8 @@ import { ethers, network } from "hardhat";
 import { VRFCoordinatorV2Mock } from "../typechain-types";
 import { verify } from "../utils/contract-verify";
 
+const SUB_LINK_FUND = "1000000000000000000000";
+
 const raffle = async (hre: HardhatRuntimeEnvironment) => {
     const { getNamedAccounts, deployments } = hre;
     const { deploy, log } = deployments;
@@ -21,12 +23,13 @@ const raffle = async (hre: HardhatRuntimeEnvironment) => {
         const transactionReceipt = await transactionResponse.wait();
         const { events } = transactionReceipt;
         subscriptionId = events ? events[0].args?.subId : "";
+
+        await vrfCoordinatorV2Mock.fundSubscription(subscriptionId, SUB_LINK_FUND);
     } else {
         vrfCoordinatorV2MockAddress = networkConfig[chainId].vrfCoordinatorV2 ?? "";
         subscriptionId = networkConfig[chainId].subId ?? "";
     }
-    const { entranceFee, gasLane, subId, callbackGasLimit, raffleInterval } =
-        networkConfig[chainId];
+    const { entranceFee, gasLane, callbackGasLimit, raffleInterval } = networkConfig[chainId];
     const args = [
         vrfCoordinatorV2MockAddress,
         entranceFee,
