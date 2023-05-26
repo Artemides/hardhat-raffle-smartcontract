@@ -12,11 +12,11 @@ pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 error Raffle__NoEnoughStartingFee();
 error Raffle__WinnerTransferFailed();
 
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     uint256 private immutable i_entraceFee;
     address payable[] s_players;
     VRFCoordinatorV2Interface private i_vrfCoordinatorV2;
@@ -64,6 +64,12 @@ contract Raffle is VRFConsumerBaseV2 {
         );
         emit RaffleRequestWinner(requestId);
     }
+
+    function checkUpkeep(
+        bytes calldata checkData
+    ) external override returns (bool upkeepNeeded, bytes memory performData) {}
+
+    function performUpkeep(bytes calldata performData) external override {}
 
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
         uint256 winnerIndex = randomWords[0] % s_players.length;
