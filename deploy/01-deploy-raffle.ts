@@ -20,10 +20,10 @@ const raffle = async (hre: HardhatRuntimeEnvironment) => {
         vrfCoordinatorV2MockAddress = vrfCoordinatorV2Mock.address;
 
         const transactionResponse = await vrfCoordinatorV2Mock.createSubscription();
-        const transactionReceipt = await transactionResponse.wait();
+        const transactionReceipt = await transactionResponse.wait(1);
         const { events } = transactionReceipt;
         subscriptionId = events ? events[0].args?.subId : "";
-
+        console.log({ number: subscriptionId });
         await vrfCoordinatorV2Mock.fundSubscription(subscriptionId, SUB_LINK_FUND);
     } else {
         vrfCoordinatorV2MockAddress = networkConfig[chainId].vrfCoordinatorV2 ?? "";

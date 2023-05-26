@@ -1,5 +1,5 @@
 import { deployments, ethers, getNamedAccounts, network } from "hardhat";
-import { developmentChains } from "../../hardhat.helper.config";
+import { developmentChains, networkConfig } from "../../hardhat.helper.config";
 import { Raffle, VRFCoordinatorV2Mock } from "../../typechain-types";
 import raffle from "../../deploy/01-deploy-raffle";
 import { assert, expect } from "chai";
@@ -12,12 +12,14 @@ import { BigNumber } from "ethers";
           let raffle: Raffle;
           let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
           let entranceFee: BigNumber;
+          let raffleInterval: BigNumber;
           beforeEach(async () => {
               deployer = (await getNamedAccounts()).deployer;
               await deployments.fixture(["all"]);
               raffle = await ethers.getContract("Raffle", deployer);
               vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock", deployer);
               entranceFee = await raffle.getEntraceFee();
+              raffleInterval = await raffle.getRaffleInterval();
           });
 
           describe("constructor", async () => {
@@ -50,7 +52,13 @@ import { BigNumber } from "ethers";
 
               it("Reverts the joining if the raffle is not open", async () => {
                   await raffle.joinRaffle({ value: entranceFee });
-                  await network.provider.send("evm_increaseTime", []);
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.send("evm_mine", []);
+
+                  await raffle.performUpkeep([]);
+                  await expect(
+                      raffle.joinRaffle({ value: entranceFee })
+                  ).to.be.revertedWithCustomError(raffle, "Raffle__NotOpen");
               });
           });
       });
