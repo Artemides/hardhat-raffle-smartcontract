@@ -7,7 +7,7 @@ import { BigNumber } from "ethers";
 
 !developmentChains.includes(network.name)
     ? describe.skip
-    : describe("Raffle Unit Test", async () => {
+    : describe("Raffle Unit Test", () => {
           let deployer: string;
           let raffle: Raffle;
           let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
@@ -22,14 +22,14 @@ import { BigNumber } from "ethers";
               raffleInterval = await raffle.getRaffleInterval();
           });
 
-          describe("constructor", async () => {
+          describe("constructor", () => {
               it("Initializes the raffle state as Open", async () => {
                   const raffleSatte = await raffle.getRaffleState();
                   assert.equal(raffleSatte, 0);
               });
           });
 
-          describe("Join Raffle", async () => {
+          describe("Join Raffle", () => {
               it("reverts if not sent at least entrance fee", async () => {
                   await expect(raffle.joinRaffle()).to.be.revertedWithCustomError(
                       raffle,
@@ -59,6 +59,47 @@ import { BigNumber } from "ethers";
                   await expect(
                       raffle.joinRaffle({ value: entranceFee })
                   ).to.be.revertedWithCustomError(raffle, "Raffle__NotOpen");
+              });
+          });
+
+          describe("checkUpKeep", () => {
+              it("returns false if raffle is not open", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.request({ method: "evm_mine", params: [] });
+
+                  await raffle.performUpkeep([]);
+                  const raffleState = await raffle.getRaffleState();
+                  const { upkeepNeeded } = await raffle.callStatic.checkUpkeep("0x");
+                  assert.equal(raffleState, 1);
+                  assert(!upkeepNeeded);
+              });
+
+              it("returns false if there's no participants or ETH", async () => {
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.request({ method: "evm_mine", params: [] });
+
+                  const { upkeepNeeded } = await raffle.callStatic.checkUpkeep("0x");
+                  assert(!upkeepNeeded);
+              });
+
+              it("returns false if the raffle interval has not been reached", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() - 1]);
+                  await network.provider.request({ method: "evm_mine", params: [] });
+
+                  const { upkeepNeeded } = await raffle.callStatic.checkUpkeep("0x");
+
+                  assert(!upkeepNeeded);
+              });
+              it("returns true if there is players, balance and raffle interval has been reached", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.request({ method: "evm_mine", params: [] });
+
+                  const { upkeepNeeded } = await raffle.callStatic.checkUpkeep("0x");
+
+                  assert(upkeepNeeded);
               });
           });
       });

@@ -39,7 +39,7 @@ const raffle = async (hre: HardhatRuntimeEnvironment) => {
         raffleInterval,
     ];
 
-    log("deploying Raffle Contrac...");
+    log("deploying Raffle Contract...");
     const raffle = await deploy("Raffle", {
         from: deployer,
         args,
