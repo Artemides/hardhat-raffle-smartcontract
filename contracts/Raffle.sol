@@ -15,8 +15,14 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 error Raffle__NoEnoughStartingFee();
 error Raffle__WinnerTransferFailed();
+error Raffle__NotOpen();
 
 contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
+    enum RaffleState {
+        OPEN,
+        CALCULATING_WINNER
+    }
+
     uint256 private immutable i_entraceFee;
     address payable[] s_players;
     VRFCoordinatorV2Interface private i_vrfCoordinatorV2;
@@ -26,6 +32,7 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     uint32 private immutable i_callbackGasLimit;
     uint8 private constant NUM_WORDS = 1;
     address private s_lastWinner;
+    RaffleState private s_raffleSate;
 
     event RafflePlayerJoined(address playerAddress);
     event RaffleRequestWinner(uint256 requestId);
@@ -33,6 +40,11 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
     modifier enoughStartingFee() {
         if (msg.value < i_entraceFee) revert Raffle__NoEnoughStartingFee();
+        _;
+    }
+
+    modifier onlyOpenRaffle() {
+        if (s_raffleSate != RaffleState.OPEN) revert Raffle__NotOpen();
         _;
     }
 
@@ -50,11 +62,8 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         i_callbackGasLimit = callbackGasLimit;
     }
 
-    // create a function to pick the winner
-    // Request the random number to VRF
-    // once got it make use of it
-    // keep in mind that VRF is two transaction process
     function requestRandomNumber() external {
+        s_raffleSate = RaffleState.CALCULATING_WINNER;
         uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
@@ -77,10 +86,12 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         (bool transfered, ) = s_lastWinner.call{value: address(this).balance}("");
         if (!transfered) revert Raffle__WinnerTransferFailed();
 
+        s_raffleSate = RaffleState.OPEN;
+        s_players = new address payable[](0);
         emit WinnerPicked(s_lastWinner);
     }
 
-    function joinRaffle() public payable enoughStartingFee {
+    function joinRaffle() public payable onlyOpenRaffle enoughStartingFee {
         s_players.push(payable(msg.sender));
 
         emit RafflePlayerJoined(msg.sender);
