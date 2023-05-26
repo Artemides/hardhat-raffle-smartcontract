@@ -37,10 +37,20 @@ import { BigNumber } from "ethers";
 
               it("Records the player when he joins", async () => {
                   await raffle.joinRaffle({
-                      value: ethers.utils.parseEther(entranceFee.toString()),
+                      value: entranceFee,
                   });
                   const player = await raffle.getPlayer(0);
                   assert.equal(player, deployer);
+              });
+              it("Emits an event when the player joins", async () => {
+                  await expect(raffle.joinRaffle({ value: entranceFee }))
+                      .to.emit(raffle, "RafflePlayerJoined")
+                      .withArgs(deployer);
+              });
+
+              it("Reverts the joining if the raffle is not open", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", []);
               });
           });
       });
