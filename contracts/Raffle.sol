@@ -16,6 +16,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 error Raffle__NoEnoughStartingFee();
 error Raffle__WinnerTransferFailed();
 error Raffle__NotOpen();
+error Raffle__NoIntervalReachedToWin(uint256 remainingInterval, uint256 raffleStatus);
 
 contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     enum RaffleState {
@@ -73,7 +74,18 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         emit RafflePlayerJoined(msg.sender);
     }
 
-    function requestRandomNumber() external {
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    ) public view override returns (bool upkeepNeeded, bytes memory performData) {
+        upkeepNeeded = isUpkeepNeeded();
+        performData = "";
+    }
+
+    function performUpkeep(bytes calldata /* performData */) external override {
+        uint256 remainingInterval = block.timestamp - s_lastRaffleInterval;
+        if (!isUpkeepNeeded())
+            revert Raffle__NoIntervalReachedToWin(remainingInterval, uint256(s_raffleSate));
+
         s_raffleSate = RaffleState.CALCULATING_WINNER;
         uint256 requestId = i_vrfCoordinatorV2.requestRandomWords(
             i_gasLane,
@@ -85,13 +97,7 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         emit RaffleRequestWinner(requestId);
     }
 
-    function checkUpkeep(
-        bytes calldata /* checkData */
-    ) external override returns (bool upkeepNeeded, bytes memory /* performData */) {
-        upkeepNeeded = isUpkeepNeeded();
-    }
-
-    function performUpkeep(bytes calldata performData) external override {}
+    // function performUpkeep(bytes calldata performData) external override {}
 
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
         uint256 winnerIndex = randomWords[0] % s_players.length;
