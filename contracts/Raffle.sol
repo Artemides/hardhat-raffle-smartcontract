@@ -32,6 +32,8 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     uint32 private immutable i_callbackGasLimit;
     uint8 private constant NUM_WORDS = 1;
     address private s_lastWinner;
+    uint256 private immutable i_raffleInterval;
+    uint256 private s_lastRaffleInterval;
     RaffleState private s_raffleSate;
 
     event RafflePlayerJoined(address playerAddress);
@@ -53,13 +55,22 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         uint256 entraceFee,
         bytes32 gasLane,
         uint64 subscriptionId,
-        uint32 callbackGasLimit
+        uint32 callbackGasLimit,
+        uint256 raffleInterval
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_entraceFee = entraceFee;
         i_vrfCoordinatorV2 = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+        i_raffleInterval = raffleInterval;
+        s_lastRaffleInterval = block.timestamp;
+    }
+
+    function joinRaffle() public payable onlyOpenRaffle enoughStartingFee {
+        s_players.push(payable(msg.sender));
+
+        emit RafflePlayerJoined(msg.sender);
     }
 
     function requestRandomNumber() external {
@@ -75,8 +86,10 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     }
 
     function checkUpkeep(
-        bytes calldata checkData
-    ) external override returns (bool upkeepNeeded, bytes memory performData) {}
+        bytes calldata /* checkData */
+    ) external override returns (bool upkeepNeeded, bytes memory /* performData */) {
+        upkeepNeeded = isUpkeepNeeded();
+    }
 
     function performUpkeep(bytes calldata performData) external override {}
 
@@ -88,13 +101,16 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
         s_raffleSate = RaffleState.OPEN;
         s_players = new address payable[](0);
+        s_lastRaffleInterval = block.timestamp;
         emit WinnerPicked(s_lastWinner);
     }
 
-    function joinRaffle() public payable onlyOpenRaffle enoughStartingFee {
-        s_players.push(payable(msg.sender));
-
-        emit RafflePlayerJoined(msg.sender);
+    function isUpkeepNeeded() internal view returns (bool upKeepNeeded) {
+        upKeepNeeded =
+            isRaffleState(RaffleState.OPEN) &&
+            thereIsPlayers() &&
+            withBalance() &&
+            intervalReached();
     }
 
     function getEntraceFee() public view returns (uint256) {
@@ -103,6 +119,22 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
     function getPlayer(uint256 playerIndex) public view returns (address) {
         return s_players[playerIndex];
+    }
+
+    function isRaffleState(RaffleState raffleSate) internal view returns (bool) {
+        return raffleSate == s_raffleSate;
+    }
+
+    function withBalance() internal view returns (bool) {
+        return address(this).balance > 0;
+    }
+
+    function intervalReached() internal view returns (bool) {
+        return (block.timestamp - s_lastRaffleInterval) > i_raffleInterval;
+    }
+
+    function thereIsPlayers() internal view returns (bool) {
+        return s_players.length > 0;
     }
 
     receive() external payable {
