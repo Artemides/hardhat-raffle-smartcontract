@@ -152,13 +152,6 @@ import { SupportInfo } from "prettier";
               });
 
               it("Picks a winner, transfers the raffle balance to the winner and resets the raffle", async () => {
-                  //declare aditional accounts
-                  //make them participant of the raffle
-                  //subscripte the emitted envent by the fulfill
-                  //1. determine the winner
-                  //2. assert the restored states for the next raffle interval
-                  //3. transfer the monet
-                  //call the vrfFullfill function
                   let accounts = await ethers.getSigners();
                   const aditionalParticipants = 5;
                   accounts = accounts.slice(1, aditionalParticipants);
