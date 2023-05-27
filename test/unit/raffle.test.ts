@@ -4,6 +4,7 @@ import { Raffle, VRFCoordinatorV2Mock } from "../../typechain-types";
 import raffle from "../../deploy/01-deploy-raffle";
 import { assert, expect } from "chai";
 import { BigNumber } from "ethers";
+import { SupportInfo } from "prettier";
 
 !developmentChains.includes(network.name)
     ? describe.skip
@@ -131,6 +132,80 @@ import { BigNumber } from "ethers";
                   const raffleState = await raffle.getRaffleState();
                   assert(requestId.toNumber() > 0);
                   assert(raffleState == 1);
+              });
+          });
+
+          describe("fulfill random words", () => {
+              beforeEach(async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.send("evm_mine", []);
+              });
+
+              it("Gets called only after the perform upkeep", async () => {
+                  await expect(
+                      vrfCoordinatorV2Mock.fulfillRandomWords(0, raffle.address)
+                  ).to.be.revertedWith("nonexistent request");
+                  await expect(
+                      vrfCoordinatorV2Mock.fulfillRandomWords(1, raffle.address)
+                  ).to.be.revertedWith("nonexistent request");
+              });
+
+              it("Picks a winner, transfers the raffle balance to the winner and resets the raffle", async () => {
+                  //declare aditional accounts
+                  //make them participant of the raffle
+                  //subscripte the emitted envent by the fulfill
+                  //1. determine the winner
+                  //2. assert the restored states for the next raffle interval
+                  //3. transfer the monet
+                  //call the vrfFullfill function
+                  let accounts = await ethers.getSigners();
+                  const aditionalParticipants = 5;
+                  accounts = accounts.slice(1, aditionalParticipants);
+
+                  await Promise.all(
+                      accounts.map(async (account) => {
+                          raffle = raffle.connect(account);
+                          await raffle.joinRaffle({ value: entranceFee });
+                      })
+                  );
+
+                  await new Promise(async (resolve, reject) => {
+                      try {
+                          raffle.once("WinnerPicked", async (winnerAddress: string) => {
+                              console.log("winner picked");
+                              const winnerBalance = await ethers.provider.getBalance(winnerAddress);
+                              const raffleState = await raffle.getRaffleState();
+                              const players = await raffle.getNumberOfPlayers();
+
+                              assert(raffleState.toString(), "0");
+                              assert(players.toString(), "0");
+                              console.log({ winnerBalance: winnerBalance.toNumber() });
+                              console.log({
+                                  balance: startingWinnerBalance
+                                      .add(entranceFee.mul(aditionalParticipants + 1))
+                                      .toString(),
+                              });
+                              assert(
+                                  winnerBalance.toString(),
+                                  startingWinnerBalance
+                                      .add(entranceFee.mul(aditionalParticipants + 1))
+                                      .toString()
+                              );
+                          });
+                          resolve("");
+                      } catch (error) {
+                          reject(error);
+                      }
+
+                      const tx = await raffle.performUpkeep("0x");
+                      const { events } = await tx.wait(1);
+                      const startingWinnerBalance = await ethers.provider.getBalance(
+                          accounts[3].address
+                      );
+                      const rqeuestId = events ? events[1].args?.requestId : "";
+                      await vrfCoordinatorV2Mock.fulfillRandomWords(rqeuestId, raffle.address);
+                  });
               });
           });
       });
