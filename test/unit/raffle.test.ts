@@ -102,4 +102,35 @@ import { BigNumber } from "ethers";
                   assert(upkeepNeeded);
               });
           });
+
+          describe("Perform upkeep", () => {
+              it("Runs only if upkeep is needed", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.send("evm_mine", []);
+                  const transaction = await raffle.performUpkeep("0x");
+                  assert(transaction);
+              });
+
+              it("Reverts if checkUpKeep is false", async () => {
+                  await expect(raffle.performUpkeep([])).to.be.revertedWithCustomError(
+                      raffle,
+                      "Raffle__NoIntervalReachedToWin"
+                  );
+              });
+
+              it("Updates raffle's state and emits the winner event", async () => {
+                  await raffle.joinRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [raffleInterval.toNumber() + 1]);
+                  await network.provider.send("evm_mine", []);
+
+                  const transaction = await raffle.performUpkeep("0x");
+                  const transactionReceipt = await transaction.wait(1);
+                  const { events } = transactionReceipt;
+                  const requestId = events ? events[1].args?.requestId : "";
+                  const raffleState = await raffle.getRaffleState();
+                  assert(requestId.toNumber() > 0);
+                  assert(raffleState == 1);
+              });
+          });
       });
