@@ -1,10 +1,8 @@
 import { deployments, ethers, getNamedAccounts, network } from "hardhat";
 import { developmentChains, networkConfig } from "../../hardhat.helper.config";
 import { Raffle, VRFCoordinatorV2Mock } from "../../typechain-types";
-import raffle from "../../deploy/01-deploy-raffle";
 import { assert, expect } from "chai";
 import { BigNumber } from "ethers";
-import { SupportInfo } from "prettier";
 
 !developmentChains.includes(network.name)
     ? describe.skip
