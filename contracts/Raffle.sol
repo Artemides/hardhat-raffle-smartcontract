@@ -169,6 +169,10 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
         return i_raffleInterval;
     }
 
+    function getLatestRaffleTimeStamp() public view returns (uint256) {
+        return s_lastRaffleInterval;
+    }
+
     receive() external payable {
         joinRaffle();
     }

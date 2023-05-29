@@ -20,7 +20,7 @@ export const networkConfig: NetworkConfig = {
         priceFeedAddress: "0x694AA1769357215DE4FAC081bf1f309aDC325306",
         entranceFee: ethers.utils.parseEther("0.01"),
         gasLane: "0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c",
-        subId: "0",
+        subId: "2400",
         callbackGasLimit: "500000",
         raffleInterval: "60",
     },
