@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
             chainId: 11155111,
             url: SEPOLIA_RPC_URL,
             accounts: METAMASK_PRIVATE_KEY ? [METAMASK_PRIVATE_KEY] : [],
+            saveDeployments: true,
         },
     },
     solidity: {

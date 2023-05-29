@@ -35,6 +35,7 @@ developmentChains.includes(network.name)
                               assert.equal(raffleStatus, 0);
                               await expect(raffle.getPlayer(0)).to.be.reverted;
                               assert(lastRaffleInterval > startingRaffleInterval);
+                              resolve("");
                           } catch (error) {
                               reject(error);
                           }
