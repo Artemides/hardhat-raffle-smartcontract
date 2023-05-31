@@ -174,10 +174,10 @@ contract Raffle is VRFConsumerBaseV2, KeeperCompatibleInterface {
     }
 
     receive() external payable {
-        joinRaffle();
+        if (msg.value > 0) joinRaffle();
     }
 
     fallback() external payable {
-        joinRaffle();
+        if (msg.value > 0) joinRaffle();
     }
 }
