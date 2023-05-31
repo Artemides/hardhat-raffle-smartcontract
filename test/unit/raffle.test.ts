@@ -17,7 +17,7 @@ import { BigNumber } from "ethers";
               await deployments.fixture(["all"]);
               raffle = await ethers.getContract("Raffle", deployer);
               vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock", deployer);
-              entranceFee = await raffle.getEntraceFee();
+              entranceFee = await raffle.getEntranceFee();
               raffleInterval = await raffle.getRaffleInterval();
           });
 
